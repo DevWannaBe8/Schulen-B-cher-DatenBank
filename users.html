@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Benutzerverwaltung</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+        }
+        header {
+            background-color: #6d75eb;
+            color: #ffffff;
+            padding: 15px;
+
+            text-align: center;
+        }
+        .container {
+            margin: 20px;
+        }
+        .buttons {
+            text-align: right;
+            margin-bottom: 10px;
+        }
+        button {
+            padding: 10px;
+            font-size: 16px;
+            margin: 5px;
+            cursor: pointer;
+            background-color: #444;
+            color: white;
+            border: none;
+            border-radius: 5px;
+        }
+        button:hover {
+            background-color: #333333;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            padding: 12px;
+            border: 1px solid #ddd;
+            text-align: left;
+        }
+        th {
+            background-color: #6d75eb;
+            color: white;
+        }
+        .actions {
+            cursor: pointer;
+        }
+        .popup {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: white;
+            padding: 20px;
+            border: 1px solid #ddd;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            z-index: 1000;
+            width: 430px;
+            border-radius: 5px;
+            border: 2px solid #444;
+        }
+        .popup input, .popup select {
+            width: 95%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .popup button {
+            background-color: #333333;
+            border-radius: 5px;
+            margin-top: 10px;
+        }
+
+        .top-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+#searchInput {
+    padding: 10px;
+    font-size: 16px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    width: 250px;
+}
+
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Benutzerverwaltung</h1>
+    </header>
+
+    <div class="top-bar">
+        <input type="text" id="searchInput" placeholder="Benutzer suchen..." onkeyup="searchUser()">
+        <div class="buttons">
+            <button onclick="window.location.href='/'">Zurück zur Bibliothek</button>
+            <button onclick="openPopup()">Benutzer Hinzufügen</button>
+        </div>
+    </div>
+    
+
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Benutzername</th>
+                    <th>Passwort</th>
+                    <th>Rolle</th>
+                    <th>Aktionen</th>
+                </tr>
+            </thead>
+            <tbody id="userList">
+                <!-- Benutzer hinzufügen-->
+                {% for username, data in users.items() %}
+                <tr>
+                    <td>{{ username }}</td>
+                    <td>{{ data.password }}</td>
+                    <td>{{ data.role }}</td>
+                    <td class="actions">
+                        <button onclick="editUser('{{ username }}')">Bearbeiten</button>
+                        <button onclick="deleteUser('{{ username }}')">Löschen</button>
+                    </td>
+                </tr>
+            {% endfor %}
+            
+
+    <!-- Popup hinzufügen-->
+    <div id="addUserPopup" class="popup">
+        <h3>Benutzer Hinzufügen</h3>
+        <label for="username">Benutzername:</label>
+        <input type="text" id="username" placeholder="Benutzername" required>
+        <label for="password">Passwort:</label>
+        <input type="password" id="password" placeholder="Passwort" required>
+        <label for="role">Rolle:</label>
+        <select id="role">
+            <option value="user">User</option>
+            <option value="admin">Admin</option>
+        </select>
+        <button onclick="addUser()">Hinzufügen</button>
+        <button onclick="closePopup()">Abbrechen</button>
+    </div>
+
+    <script>
+        // Bearbeiten User
+        function editUser(username) {
+            const newPassword = prompt("Neues Passwort für " + username + ":");
+            const newRole = prompt("Neue Rolle für " + username + ":");
+        
+            if (newPassword && newRole) {
+                fetch('/edit_user', {
+                    method: 'POST',
+                    body: new URLSearchParams({
+                        'username': username,
+                        'password': newPassword,
+                        'role': newRole
+                    }),
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    alert(data.message);
+                    loadUsers(); 
+                });
+            }
+        }
+        
+        // Löschen User
+        function deleteUser(username) {
+            if (confirm("Bist du sicher, dass du den Benutzer " + username + " löschen möchtest?")) {
+                fetch('/delete_user', {
+                    method: 'POST',
+                    body: new URLSearchParams({ 'username': username }),
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    alert(data.message);
+                    loadUsers();
+                });
+            }
+        }
+    
+        // API User
+        function loadUsers() {
+            fetch('/users')
+                .then(response => response.json())
+                .then(data => {
+                    const userList = document.getElementById('userList');
+                    userList.innerHTML = ''; 
+            
+                    
+                    for (const username in data) {
+                        const user = data[username];
+                        const row = document.createElement('tr');
+            
+                        const usernameCell = document.createElement('td');
+                        usernameCell.textContent = username;
+            
+                        const passwordCell = document.createElement('td');
+                        passwordCell.textContent = user.password;
+            
+                        const roleCell = document.createElement('td');
+                        roleCell.textContent = user.role;
+            
+                        const actionsCell = document.createElement('td');
+                        actionsCell.innerHTML = `
+                            <button onclick="editUser('${username}')">Bearbeiten</button>
+                            <button onclick="deleteUser('${username}')">Löschen</button>
+                        `;
+            
+                        row.appendChild(usernameCell);
+                        row.appendChild(passwordCell);
+                        row.appendChild(roleCell);
+                        row.appendChild(actionsCell);
+            
+                        userList.appendChild(row);
+                    }
+                });
+        }
+    
+        // user seite alden
+        window.onload = loadUsers;
+
+        //open popup
+function openPopup() {
+    document.getElementById('addUserPopup').style.display = 'block';
+}
+
+// close popup
+function closePopup() {
+    document.getElementById('addUserPopup').style.display = 'none';
+}
+
+// Hinzufügen user + API
+function addUser() {
+    const username = document.getElementById('username').value;
+    const password = document.getElementById('password').value;
+    const role = document.getElementById('role').value;
+
+    // JSON send
+    fetch('/add_user', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            username: username,
+            password: password,
+            role: role
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        alert(data.message);
+        closePopup();  // Popup close
+        loadUsers();   // Benutzerliste new load
+    })
+    .catch(error => {
+        console.error('Error:', error);
+    });
+}
+
+function searchUser() {
+    let input = document.getElementById("searchInput").value.toLowerCase();
+    let rows = document.querySelectorAll("#userList tr");
+
+    rows.forEach(row => {
+        let username = row.getElementsByTagName("td")[0].textContent.toLowerCase();
+        row.style.display = username.includes(input) ? "" : "none";
+    });
+}
+
+    </script>    
+</body>
+</html>
+

@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            padding: 10px;
+            background-color: #6d75eb;
+            color: white;
+        }
+        .logs {
+            margin-top: 20px;
+            width: 80%;
+            max-height: 400px;
+            overflow-y: scroll;
+            border: 1px solid #ddd;
+            padding: 10px;
+            background-color: #f9f9f9;
+        }
+        .buttons {
+            margin-top: 20px;
+            text-align: center;
+        }
+        button {
+            padding: 10px;
+            font-size: 16px;
+            margin: 5px;
+            cursor: pointer;
+            background-color: #444;
+            color: white;
+            border: none;
+            border-radius: 5px;
+        }
+        button:hover {
+            background-color: #363636;
+        }
+        .das{
+            text-align: center;
+            color: #ffffff;
+            font-size: 40px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+            <div class="das">
+            <div>Admin Dashboard</div>
+        </div>
+        <div>
+            <button onclick="window.location.href='/'">Zurück zum Start</button>
+        </div>
+    </div>
+
+    <!-- Logs anzeigen -->
+    <div class="logs">
+        <h3>Logs</h3>
+        {% for log in logs %}
+            <p><strong>{{ log.timestamp }}:</strong> {{ log.message }}</p>
+        {% endfor %}
+    </div>
+
+    <!-- Button zum Bearbeiten von Benutzern -->
+    <div class="buttons">
+        <button onclick="window.location.href='/users'">Benutzer Bearbeiten</button>
+    </div>
+</body>
+</html>
