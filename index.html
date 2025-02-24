@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bücherliste</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <style>
+        /* Tabelle bleibt unverändert */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th, td {
+            padding: 10px;
+            border: 1px solid #ddd;
+        }
+
+        th {
+            background-color: #6d75eb;
+            color: white;
+        }
+
+        .container {
+            padding: 20px;
+            position: relative;
+        }
+
+        .button-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .admin-button {
+            padding: 10px;
+            background-color: #fff;
+            color: #6d75eb;
+            border: 2px solid #6d75eb;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .admin-button:hover {
+            background-color: #6169da;
+            color: white;
+        }
+
+        #image-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: none;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #overlay-image {
+            max-width: 80%;
+            max-height: 80%;
+            border-radius: 8px;
+        }
+
+        .close-button {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background-color: #fff;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+            border-radius: 50%;
+            padding: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="button-container">
+            <button id="downloadButton">📥 Bücherliste herunterladen</button>
+            <button class="admin-button" onclick="window.location.href='/login'">Users/Admin Login</button>
+        </div>
+
+        <h1>YOUR SCHOOL NAME HERE </h1>
+        <h2>Bücher</h2>
+
+        <label for="searchType">Suche nach:</label>
+        <select id="searchType">
+            <option value="title">Titel</option>
+            <option value="author">Autor</option>
+            <option value="genre">Genre</option>
+        </select>
+
+        <input type="text" id="searchInput" placeholder="Suchbegriff eingeben..." onkeyup="filterBooks()">
+
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Buchtitel</th>
+                    <th>Autor</th>
+                    <th>Seiten</th>
+                    <th>ISBN</th>
+                    <th>Genre</th>
+                </tr>
+            </thead>
+            <tbody id="booksList">
+                <!-- Dynamische Buchanzeigen -->
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Overlay für Bildanzeige -->
+    <div id="image-overlay">
+        <img id="overlay-image" src="" alt="Buchcover">
+        <button class="close-button" onclick="closeImage()">×</button>
+    </div>
+
+    <script>
+        let books = [];
+
+        window.onload = function() {
+            fetch('/books')
+                .then(response => response.json())
+                .then(data => {
+                    books = data.sort((a, b) => a.id - b.id);
+                    displayBooks(books);
+                });
+        };
+
+        function displayBooks(filteredBooks) {
+            const tbody = document.getElementById('booksList');
+            tbody.innerHTML = "";
+
+            filteredBooks.forEach(book => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td onclick="showImage(${book.id})">${book.id}</td>
+                    <td>${book.title}</td>
+                    <td>${book.author}</td>
+                    <td>${book.pages}</td>
+                    <td>${book.isbn}</td>
+                    <td>${book.genre}</td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function showImage(bookId) {
+            const book = books.find(b => b.id === bookId);
+            const imagePath = `/static/img/${book.id}.jpg`;
+            document.getElementById('overlay-image').src = imagePath;
+            document.getElementById('image-overlay').style.display = 'flex';
+        }
+
+        function closeImage() {
+            document.getElementById('image-overlay').style.display = 'none';
+        }
+
+        function filterBooks() {
+            const searchType = document.getElementById("searchType").value;
+            const searchInput = document.getElementById("searchInput").value.toLowerCase();
+
+            const filteredBooks = books.filter(book =>
+                book[searchType].toLowerCase().includes(searchInput)
+            );
+
+            displayBooks(filteredBooks.sort((a, b) => a.id - b.id));
+        }
+
+        document.getElementById("downloadButton").addEventListener("click", function() {
+            let text = "ID | Titel | Autor | Seiten | ISBN | Genre\n";
+            text += "-----------------------------------------\n";
+            books.forEach(book => {
+                text += `${book.id} | ${book.title} | ${book.author} | ${book.pages} | ${book.isbn} | ${book.genre}\n`;
+            });
+
+            const blob = new Blob([text], { type: "text/plain" });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = "books-list.txt";
+            link.click();
+        });
+    </script>
+</body>
+</html>

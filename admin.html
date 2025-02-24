@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Bücherverwaltung</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>Bücherverwaltung</h1>
+        
+        <!-- Button, um das Popup zu öffnen -->
+        <button onclick="openAddBookPopup()">+ Buch hinzufügen</button>
+        
+        <!-- Button für Zurück zur Startseite -->
+        <button class="back-button" onclick="window.location.href='/'">🏠 Zurück zur Startseite</button>
+        
+        <!-- Popup für Buch hinzufügen -->
+        <div id="add-book-popup" class="popup">
+            <div class="popup-content">
+                <span class="close" onclick="closeAddBookPopup()">&times;</span>
+                <h2>Neues Buch hinzufügen</h2>
+                <form id="add-book-form">
+                    <label for="book-id">ID</label>
+                    <input type="number" id="book-id" required>
+                    
+                    <label for="book-title">Buchtitel</label>
+                    <input type="text" id="book-title" required>
+                    
+                    <label for="book-author">Autor</label>
+                    <input type="text" id="book-author" required>
+                    
+                    <label for="book-pages">Seitenzahl</label>
+                    <input type="number" id="book-pages" required>
+
+                    <label for="book-isbn">ISBN</label>
+                    <input type="text" id="book-isbn" required>
+
+                    <label for="book-genre">Genre</label>
+                    <select id="book-genre" required>
+                        {% for genre in genres %}
+                            <option value="{{ genre }}">{{ genre }}</option>
+                        {% endfor %}
+                    </select>
+                    
+                    <button type="submit">✅ Buch speichern</button>
+                    <button type="button" onclick="closeAddBookPopup()">❌ Abbrechen</button>
+                </form>
+            </div>
+        </div>
+
+        <div id="book-list">
+            <h2>Vorhandene Bücher</h2>
+            <table id="book-data">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Buchtitel</th>
+                        <th>Autor</th>
+                        <th>Seitenzahl</th>
+                        <th>ISBN</th>
+                        <th>Genre</th>
+                        <th>Aktionen</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Bücher werden hier angezeigt -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        let books = [];
+
+        // Bücher laden und nach ID sortieren
+        function displayBooks() {
+            fetch('/books')
+                .then(response => response.json())
+                .then(data => {
+                    books = data.sort((a, b) => a.id - b.id); // 🔥 Nach ID sortieren
+                    const bookData = document.getElementById('book-data').getElementsByTagName('tbody')[0];
+                    bookData.innerHTML = '';
+
+                    books.forEach(book => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>${book.id}</td>
+                            <td>${book.title}</td>
+                            <td>${book.author}</td>
+                            <td>${book.pages}</td>
+                            <td>${book.isbn}</td>
+                            <td>${book.genre}</td>
+                            <td>
+                                <button onclick="editBook(${book.id})">✏️ Bearbeiten</button>
+                                <button onclick="deleteBook(${book.id})">🗑️ Löschen</button>
+                            </td>
+                        `;
+                        bookData.appendChild(row);
+                    });
+                });
+        }
+
+        // Popup öffnen
+        function openAddBookPopup() {
+            document.getElementById('add-book-popup').style.display = 'block';
+        }
+
+        // Popup schließen
+        function closeAddBookPopup() {
+            document.getElementById('add-book-popup').style.display = 'none';
+        }
+
+        // Buch hinzufügen
+        document.getElementById('add-book-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const id = document.getElementById('book-id').value;
+            const title = document.getElementById('book-title').value;
+            const author = document.getElementById('book-author').value;
+            const pages = document.getElementById('book-pages').value;
+            const isbn = document.getElementById('book-isbn').value;
+            const genre = document.getElementById('book-genre').value;
+
+            const newBook = { id: parseInt(id), title, author, pages, isbn, genre };
+
+            fetch('/books', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(newBook),
+            })
+            .then(response => response.json())
+            .then(book => {
+                console.log('Buch hinzugefügt:', book);
+                displayBooks();
+                closeAddBookPopup();
+            });
+        });
+
+        // Buch bearbeiten
+        function editBook(id) {
+            const newTitle = prompt("Neuer Titel:", books.find(b => b.id === id)?.title || "");
+            const newAuthor = prompt("Neuer Autor:", books.find(b => b.id === id)?.author || "");
+            const newPages = prompt("Neue Seitenzahl:", books.find(b => b.id === id)?.pages || "");
+            const newIsbn = prompt("Neue ISBN:", books.find(b => b.id === id)?.isbn || "");
+            const newGenre = prompt("Neues Genre:", books.find(b => b.id === id)?.genre || "");
+
+            const updatedBook = { id, title: newTitle, author: newAuthor, pages: newPages, isbn: newIsbn, genre: newGenre };
+
+            fetch(`/books/${id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(updatedBook),
+            })
+            .then(response => response.json())
+            .then(book => {
+                console.log('Buch bearbeitet:', book);
+                displayBooks();
+            });
+        }
+
+        // Buch löschen
+        function deleteBook(id) {
+            if (confirm("Möchten Sie dieses Buch wirklich löschen?")) {
+                fetch(`/books/${id}`, {
+                    method: 'DELETE',
+                })
+                .then(response => response.json())
+                .then(result => {
+                    console.log('Buch gelöscht:', result);
+                    displayBooks();
+                });
+            }
+        }
+
+        // Bücher beim Laden der Seite anzeigen
+        window.onload = displayBooks;
+    </script>
+</body>
+</html>
